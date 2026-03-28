@@ -1,5 +1,6 @@
 package com.restaurant.util;
 
+import com.restaurant.model.ChefKitchenLine;
 import com.restaurant.model.DiningTable;
 import com.restaurant.model.MenuItem;
 import com.restaurant.model.MenuItemType;
@@ -8,6 +9,7 @@ import com.restaurant.model.OrderLineView;
 import com.restaurant.model.TableStatus;
 
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -130,12 +132,37 @@ public final class TablePrinter {
                     v.getQuantity(),
                     v.getUnitPrice(),
                     v.getLineTotal(),
-                    lineStatusVi(v.getLineStatus()));
+                    orderLineStatusVi(v.getLineStatus()));
         }
         System.out.println(line);
     }
 
-    private static String lineStatusVi(OrderLineStatus s) {
+    private static final DateTimeFormatter CHEF_TIME = DateTimeFormatter.ofPattern("dd/MM HH:mm");
+
+    public static void printChefKitchenQueue(List<ChefKitchenLine> lines) {
+        if (lines.isEmpty()) {
+            System.out.println("(Không có món nào đang chờ bếp xử lý.)");
+            return;
+        }
+        String sep = "--------------------------------------------------------------------------------------------------------";
+        System.out.println(sep);
+        System.out.printf("%-8s %-8s %-10s %-26s %5s %-12s %14s%n",
+                "ID dòng", "Order", "Bàn", "Món", "SL", "Trạng thái", "Giờ tạo");
+        System.out.println(sep);
+        for (ChefKitchenLine r : lines) {
+            System.out.printf("%-8d %-8d %-10s %-26s %5d %-12s %14s%n",
+                    r.getDetailId(),
+                    r.getOrderId(),
+                    truncate(r.getTableCode(), 10),
+                    truncate(r.getMenuItemName(), 26),
+                    r.getQuantity(),
+                    orderLineStatusVi(r.getLineStatus()),
+                    r.getCreatedAt().format(CHEF_TIME));
+        }
+        System.out.println(sep);
+    }
+
+    public static String orderLineStatusVi(OrderLineStatus s) {
         return switch (s) {
             case PENDING -> "Chờ";
             case COOKING -> "Đang nấu";

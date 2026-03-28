@@ -1,5 +1,11 @@
 # Restaurant Management — Java Core + JDBC
 
+## Buổi 4 (đã triển khai)
+
+- Đầu bếp: xem hàng đợi (order **OPEN**, `manager_approval = APPROVED`, trạng thái PENDING / COOKING / READY), sắp xếp theo `created_at`.
+- Cập nhật **đúng một bước** mỗi lần: PENDING→COOKING→READY→SERVED.
+- Khách xem lại món từ DB (không cache).
+
 ## Buổi 3 (đã triển khai)
 
 - Khách: xem thực đơn (chỉ `is_active`), nhóm đồ ăn / đồ uống.
@@ -13,7 +19,7 @@
 - Đăng nhập (sai thì nhập lại; nhập `0` làm tên đăng nhập để quay lại menu chính).
 - Đăng ký khách hàng (validate, username không trùng, lưu bcrypt).
 - Menu **Quản lý**: CRUD + tìm kiếm thực đơn (xóa = ẩn `is_active`), CRUD + tìm bàn theo mã.
-- **Đầu bếp**: placeholder đến buổi 4.
+- **Đầu bếp** (buổi 4): hàng đợi bếp, chuyển trạng thái tuần tự PENDING→COOKING→READY→SERVED (chỉ dòng `manager_approval = APPROVED`).
 
 Chạy ứng dụng:
 

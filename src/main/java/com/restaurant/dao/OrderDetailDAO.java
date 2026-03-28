@@ -1,5 +1,6 @@
 package com.restaurant.dao;
 
+import com.restaurant.model.ChefKitchenLine;
 import com.restaurant.model.MenuItemType;
 import com.restaurant.model.OrderLineStatus;
 import com.restaurant.model.OrderLineView;
@@ -105,6 +106,91 @@ public class OrderDetailDAO {
                         MenuItemType.valueOf(rs.getString("item_type"))));
             }
         }
+    }
+
+    /**
+     * Hàng đợi bếp: order đang OPEN, đã duyệt (nâng cao 08), chưa SERVED/CANCELLED.
+     * Sắp xếp theo thời gian tạo dòng tăng dần.
+     */
+    public List<ChefKitchenLine> listKitchenQueue() throws SQLException {
+        String sql = """
+                SELECT od.id, o.id AS order_id, dt.table_code, mi.name, od.quantity, od.line_status, od.created_at
+                FROM order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN dining_tables dt ON dt.id = o.table_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                WHERE o.status = 'OPEN'
+                  AND od.manager_approval = 'APPROVED'
+                  AND od.line_status IN ('PENDING', 'COOKING', 'READY')
+                ORDER BY od.created_at ASC, od.id ASC
+                """;
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            List<ChefKitchenLine> list = new ArrayList<>();
+            while (rs.next()) {
+                list.add(mapChefLine(rs));
+            }
+            return list;
+        }
+    }
+
+    /**
+     * Dòng thuộc order OPEN và đã APPROVED (để đầu bếp cập nhật / báo lỗi rõ).
+     */
+    public Optional<ChefKitchenLine> findKitchenLineForChef(long detailId) throws SQLException {
+        String sql = """
+                SELECT od.id, o.id AS order_id, dt.table_code, mi.name, od.quantity, od.line_status, od.created_at
+                FROM order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN dining_tables dt ON dt.id = o.table_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                WHERE od.id = ?
+                  AND o.status = 'OPEN'
+                  AND od.manager_approval = 'APPROVED'
+                """;
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, detailId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapChefLine(rs));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Chỉ cập nhật nếu trạng thái hiện tại đúng {@code expected} (tránh race đơn giản).
+     */
+    public int updateLineStatusIf(long detailId, OrderLineStatus expected, OrderLineStatus next) throws SQLException {
+        String sql = """
+                UPDATE order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                SET od.line_status = ?
+                WHERE od.id = ? AND od.line_status = ? AND o.status = 'OPEN'
+                  AND od.manager_approval = 'APPROVED'
+                """;
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, next.name());
+            ps.setLong(2, detailId);
+            ps.setString(3, expected.name());
+            return ps.executeUpdate();
+        }
+    }
+
+    private static ChefKitchenLine mapChefLine(ResultSet rs) throws SQLException {
+        ChefKitchenLine row = new ChefKitchenLine();
+        row.setDetailId(rs.getLong("id"));
+        row.setOrderId(rs.getLong("order_id"));
+        row.setTableCode(rs.getString("table_code"));
+        row.setMenuItemName(rs.getString("name"));
+        row.setQuantity(rs.getInt("quantity"));
+        row.setLineStatus(OrderLineStatus.valueOf(rs.getString("line_status")));
+        row.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+        return row;
     }
 
     public int markCancelledIfPending(Connection c, long detailId, long customerUserId) throws SQLException {
