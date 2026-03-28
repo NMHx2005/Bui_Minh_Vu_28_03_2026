@@ -13,6 +13,8 @@ public class ChefKitchenLine {
     private String menuItemName;
     private int quantity;
     private OrderLineStatus lineStatus;
+    private MenuItemType itemType;
+    private ManagerApproval managerApproval;
     private LocalDateTime createdAt;
 
     public long getDetailId() {
@@ -61,6 +63,22 @@ public class ChefKitchenLine {
 
     public void setLineStatus(OrderLineStatus lineStatus) {
         this.lineStatus = lineStatus;
+    }
+
+    public MenuItemType getItemType() {
+        return itemType;
+    }
+
+    public void setItemType(MenuItemType itemType) {
+        this.itemType = itemType;
+    }
+
+    public ManagerApproval getManagerApproval() {
+        return managerApproval;
+    }
+
+    public void setManagerApproval(ManagerApproval managerApproval) {
+        this.managerApproval = managerApproval;
     }
 
     public LocalDateTime getCreatedAt() {

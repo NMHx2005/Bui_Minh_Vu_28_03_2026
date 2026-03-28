@@ -59,7 +59,7 @@ CREATE TABLE orders (
     KEY idx_orders_checked_out (checked_out_at)
 ) ENGINE=InnoDB;
 
--- manager_approval: phục vụ nâng cao “Duyệt món” (08). Mặc định APPROVED = luồng hiện tại không cần đổi code ngay.
+-- manager_approval (08): PENDING khi khách mới gọi; đồ ăn duyệt sau READY; đồ uống duyệt trước (trừ kho lúc duyệt).
 CREATE TABLE order_details (
     id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_id            BIGINT UNSIGNED NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE order_details (
     quantity            INT UNSIGNED NOT NULL,
     unit_price          DECIMAL(12, 2) NOT NULL,
     line_status         ENUM('PENDING', 'COOKING', 'READY', 'SERVED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
-    manager_approval    ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'APPROVED',
+    manager_approval    ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_od_order FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
     CONSTRAINT fk_od_menu FOREIGN KEY (menu_item_id) REFERENCES menu_items (id),

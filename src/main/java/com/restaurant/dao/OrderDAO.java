@@ -9,9 +9,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class OrderDAO {
+
+    public record OpenOrderSummary(long orderId, long tableId, String tableCode) {
+    }
 
     private static RestaurantOrder mapOrder(ResultSet rs) throws SQLException {
         RestaurantOrder o = new RestaurantOrder();
@@ -152,5 +157,27 @@ public class OrderDAO {
             ps.setLong(1, orderId);
             return ps.executeUpdate();
         }
+    }
+
+    public List<OpenOrderSummary> listOpenOrderSummaries() throws SQLException {
+        String sql = """
+                SELECT o.id, o.table_id, dt.table_code
+                FROM orders o
+                INNER JOIN dining_tables dt ON dt.id = o.table_id
+                WHERE o.status = 'OPEN'
+                ORDER BY o.id ASC
+                """;
+        List<OpenOrderSummary> out = new ArrayList<>();
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                out.add(new OpenOrderSummary(
+                        rs.getLong("id"),
+                        rs.getLong("table_id"),
+                        rs.getString("table_code")));
+            }
+        }
+        return out;
     }
 }

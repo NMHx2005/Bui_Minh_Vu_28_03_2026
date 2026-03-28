@@ -115,8 +115,9 @@ public class CustomerOrderService {
                 }
                 MenuItem item = itemOpt.get();
                 if (item.getItemType() == MenuItemType.DRINK) {
-                    if (!menuItemDAO.decrementDrinkStock(conn, menuItemId, quantity)) {
-                        throw new ServiceException("Không đủ tồn kho đồ uống cho số lượng bạn chọn.");
+                    Integer stock = item.getStockQuantity();
+                    if (stock == null || stock < quantity) {
+                        throw new ServiceException("Không đủ tồn kho đồ uống cho số lượng bạn chọn (chỉ kiểm tra; trừ kho khi quản lý duyệt).");
                     }
                 }
                 orderDetailDAO.insertLine(conn, order.getId(), menuItemId, quantity, item.getPrice());
@@ -161,9 +162,6 @@ public class CustomerOrderService {
                 int n = orderDetailDAO.markCancelledIfPending(conn, orderDetailId, customerUserId);
                 if (n != 1) {
                     throw new ServiceException("Không hủy được (trạng thái đã thay đổi).");
-                }
-                if (info.getItemType() == MenuItemType.DRINK) {
-                    menuItemDAO.incrementDrinkStock(conn, info.getMenuItemId(), info.getQuantity());
                 }
                 orderDAO.recalculateTotalAmount(conn, info.getOrderId());
                 conn.commit();

@@ -1,6 +1,7 @@
 package com.restaurant.dao;
 
 import com.restaurant.model.ChefKitchenLine;
+import com.restaurant.model.ManagerApproval;
 import com.restaurant.model.MenuItemType;
 import com.restaurant.model.OrderLineStatus;
 import com.restaurant.model.OrderLineView;
@@ -18,6 +19,11 @@ import java.util.Optional;
 
 public class OrderDetailDAO {
 
+    private static final String LINE_VIEW_SELECT = """
+            od.id, od.menu_item_id, mi.name, mi.item_type, od.quantity, od.unit_price, od.line_status,
+            od.manager_approval
+            """;
+
     private static OrderLineView mapLineView(ResultSet rs) throws SQLException {
         OrderLineView v = new OrderLineView();
         v.setDetailId(rs.getLong("id"));
@@ -27,6 +33,7 @@ public class OrderDetailDAO {
         v.setQuantity(rs.getInt("quantity"));
         v.setUnitPrice(rs.getBigDecimal("unit_price"));
         v.setLineStatus(OrderLineStatus.valueOf(rs.getString("line_status")));
+        v.setManagerApproval(ManagerApproval.valueOf(rs.getString("manager_approval")));
         return v;
     }
 
@@ -45,7 +52,8 @@ public class OrderDetailDAO {
 
     public List<OrderLineView> listLinesForOrder(Connection c, long orderId) throws SQLException {
         String sql = """
-                SELECT od.id, od.menu_item_id, mi.name, mi.item_type, od.quantity, od.unit_price, od.line_status
+                SELECT
+                """ + LINE_VIEW_SELECT + """
                 FROM order_details od
                 INNER JOIN menu_items mi ON mi.id = od.menu_item_id
                 WHERE od.order_id = ?
@@ -66,7 +74,8 @@ public class OrderDetailDAO {
     public List<OrderLineView> listLinesForCustomerOrder(Connection c, long orderId, long customerUserId)
             throws SQLException {
         String sql = """
-                SELECT od.id, od.menu_item_id, mi.name, mi.item_type, od.quantity, od.unit_price, od.line_status
+                SELECT
+                """ + LINE_VIEW_SELECT + """
                 FROM order_details od
                 INNER JOIN orders o ON o.id = od.order_id
                 INNER JOIN menu_items mi ON mi.id = od.menu_item_id
@@ -89,8 +98,8 @@ public class OrderDetailDAO {
     public long insertLine(Connection c, long orderId, long menuItemId, int quantity, BigDecimal unitPrice)
             throws SQLException {
         String sql = """
-                INSERT INTO order_details (order_id, menu_item_id, quantity, unit_price, line_status)
-                VALUES (?, ?, ?, ?, 'PENDING')
+                INSERT INTO order_details (order_id, menu_item_id, quantity, unit_price, line_status, manager_approval)
+                VALUES (?, ?, ?, ?, 'PENDING', 'PENDING')
                 """;
         try (PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, orderId);
@@ -108,7 +117,7 @@ public class OrderDetailDAO {
     }
 
     /**
-     * Dòng PENDING của khách; dùng trước khi hủy để biết loại món (hoàn kho đồ uống).
+     * Dòng PENDING của khách; chỉ khi chưa được quản lý duyệt (đồ uống chưa trừ kho).
      */
     public Optional<PendingLineInfo> findPendingLineForCustomer(Connection c, long detailId, long customerUserId)
             throws SQLException {
@@ -118,6 +127,7 @@ public class OrderDetailDAO {
                 INNER JOIN orders o ON o.id = od.order_id
                 INNER JOIN menu_items mi ON mi.id = od.menu_item_id
                 WHERE od.id = ? AND o.customer_user_id = ? AND od.line_status = 'PENDING'
+                  AND od.manager_approval = 'PENDING'
                 """;
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, detailId);
@@ -136,19 +146,24 @@ public class OrderDetailDAO {
     }
 
     /**
-     * Hàng đợi bếp: order đang OPEN, đã duyệt (nâng cao 08), chưa SERVED/CANCELLED.
-     * Sắp xếp theo thời gian tạo dòng tăng dần.
+     * Nâng cao 08 — đồ ăn: bếp nấu khi quản lý chưa duyệt; đồ uống: chỉ sau khi duyệt (trừ kho).
+     * Đồ ăn READY + chưa duyệt: vẫn hiện ở bếp (chờ quản lý duyệt mới được READY→SERVED).
      */
     public List<ChefKitchenLine> listKitchenQueue() throws SQLException {
         String sql = """
-                SELECT od.id, o.id AS order_id, dt.table_code, mi.name, od.quantity, od.line_status, od.created_at
+                SELECT od.id, o.id AS order_id, dt.table_code, mi.name, mi.item_type,
+                       od.quantity, od.line_status, od.manager_approval, od.created_at
                 FROM order_details od
                 INNER JOIN orders o ON o.id = od.order_id
                 INNER JOIN dining_tables dt ON dt.id = o.table_id
                 INNER JOIN menu_items mi ON mi.id = od.menu_item_id
                 WHERE o.status = 'OPEN'
-                  AND od.manager_approval = 'APPROVED'
                   AND od.line_status IN ('PENDING', 'COOKING', 'READY')
+                  AND (
+                    (mi.item_type = 'FOOD' AND od.manager_approval = 'PENDING')
+                    OR (mi.item_type = 'FOOD' AND od.manager_approval = 'APPROVED' AND od.line_status = 'READY')
+                    OR (mi.item_type = 'DRINK' AND od.manager_approval = 'APPROVED')
+                  )
                 ORDER BY od.created_at ASC, od.id ASC
                 """;
         try (Connection c = DBConnection.getConnection();
@@ -162,19 +177,18 @@ public class OrderDetailDAO {
         }
     }
 
-    /**
-     * Dòng thuộc order OPEN và đã APPROVED (để đầu bếp cập nhật / báo lỗi rõ).
-     */
-    public Optional<ChefKitchenLine> findKitchenLineForChef(long detailId) throws SQLException {
+    /** Một dòng order OPEN (bếp / kiểm tra bước tiếp theo). */
+    public Optional<ChefKitchenLine> findOpenKitchenLine(long detailId) throws SQLException {
         String sql = """
-                SELECT od.id, o.id AS order_id, dt.table_code, mi.name, od.quantity, od.line_status, od.created_at
+                SELECT od.id, o.id AS order_id, dt.table_code, mi.name, mi.item_type,
+                       od.quantity, od.line_status, od.manager_approval, od.created_at
                 FROM order_details od
                 INNER JOIN orders o ON o.id = od.order_id
                 INNER JOIN dining_tables dt ON dt.id = o.table_id
                 INNER JOIN menu_items mi ON mi.id = od.menu_item_id
-                WHERE od.id = ?
-                  AND o.status = 'OPEN'
-                  AND od.manager_approval = 'APPROVED'
+                WHERE od.id = ? AND o.status = 'OPEN'
+                  AND od.line_status NOT IN ('CANCELLED', 'SERVED')
+                  AND od.manager_approval <> 'REJECTED'
                 """;
         try (Connection c = DBConnection.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -188,22 +202,146 @@ public class OrderDetailDAO {
         return Optional.empty();
     }
 
-    /**
-     * Chỉ cập nhật nếu trạng thái hiện tại đúng {@code expected} (tránh race đơn giản).
-     */
-    public int updateLineStatusIf(long detailId, OrderLineStatus expected, OrderLineStatus next) throws SQLException {
+    /** Đồ ăn: PENDING + quản lý chưa duyệt — chuyển PENDING→COOKING→READY. */
+    public int advanceFoodCooking(long detailId, OrderLineStatus from, OrderLineStatus to) throws SQLException {
         String sql = """
                 UPDATE order_details od
                 INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
                 SET od.line_status = ?
-                WHERE od.id = ? AND od.line_status = ? AND o.status = 'OPEN'
-                  AND od.manager_approval = 'APPROVED'
+                WHERE od.id = ? AND o.status = 'OPEN'
+                  AND mi.item_type = 'FOOD'
+                  AND od.manager_approval = 'PENDING'
+                  AND od.line_status = ?
                 """;
         try (Connection c = DBConnection.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, next.name());
+            ps.setString(1, to.name());
             ps.setLong(2, detailId);
-            ps.setString(3, expected.name());
+            ps.setString(3, from.name());
+            return ps.executeUpdate();
+        }
+    }
+
+    /** Đồ ăn: READY + đã duyệt — phục vụ. */
+    public int advanceFoodReadyToServed(long detailId) throws SQLException {
+        String sql = """
+                UPDATE order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                SET od.line_status = 'SERVED'
+                WHERE od.id = ? AND o.status = 'OPEN'
+                  AND mi.item_type = 'FOOD'
+                  AND od.manager_approval = 'APPROVED'
+                  AND od.line_status = 'READY'
+                """;
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, detailId);
+            return ps.executeUpdate();
+        }
+    }
+
+    /** Đồ uống: đã duyệt quản lý — chuyển bước bếp/phục vụ. */
+    public int advanceDrinkLine(long detailId, OrderLineStatus from, OrderLineStatus to) throws SQLException {
+        String sql = """
+                UPDATE order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                SET od.line_status = ?
+                WHERE od.id = ? AND o.status = 'OPEN'
+                  AND mi.item_type = 'DRINK'
+                  AND od.manager_approval = 'APPROVED'
+                  AND od.line_status = ?
+                """;
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, to.name());
+            ps.setLong(2, detailId);
+            ps.setString(3, from.name());
+            return ps.executeUpdate();
+        }
+    }
+
+    public Optional<DetailApprovalRow> findDetailApprovalRow(Connection c, long detailId) throws SQLException {
+        String sql = """
+                SELECT od.order_id, od.menu_item_id, mi.item_type, od.quantity, od.line_status, od.manager_approval
+                FROM order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                WHERE od.id = ? AND o.status = 'OPEN'
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, detailId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(new DetailApprovalRow(
+                        rs.getLong("order_id"),
+                        rs.getLong("menu_item_id"),
+                        MenuItemType.valueOf(rs.getString("item_type")),
+                        rs.getInt("quantity"),
+                        OrderLineStatus.valueOf(rs.getString("line_status")),
+                        ManagerApproval.valueOf(rs.getString("manager_approval"))));
+            }
+        }
+    }
+
+    public Optional<DetailApprovalRow> findDetailApprovalRow(long detailId) throws SQLException {
+        try (Connection c = DBConnection.getConnection()) {
+            return findDetailApprovalRow(c, detailId);
+        }
+    }
+
+    /** Đồ ăn: duyệt sau khi bếp READY. */
+    public int approveFoodIfReadyPending(Connection c, long detailId) throws SQLException {
+        String sql = """
+                UPDATE order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                SET od.manager_approval = 'APPROVED'
+                WHERE od.id = ? AND o.status = 'OPEN'
+                  AND mi.item_type = 'FOOD'
+                  AND od.line_status = 'READY'
+                  AND od.manager_approval = 'PENDING'
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, detailId);
+            return ps.executeUpdate();
+        }
+    }
+
+    /** Đồ uống: duyệt khi còn PENDING dòng + chờ quản lý (kho trừ ở service). */
+    public int approveDrinkIfPending(Connection c, long detailId) throws SQLException {
+        String sql = """
+                UPDATE order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                SET od.manager_approval = 'APPROVED'
+                WHERE od.id = ? AND o.status = 'OPEN'
+                  AND mi.item_type = 'DRINK'
+                  AND od.line_status = 'PENDING'
+                  AND od.manager_approval = 'PENDING'
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, detailId);
+            return ps.executeUpdate();
+        }
+    }
+
+    public int rejectIfManagerPending(Connection c, long detailId) throws SQLException {
+        String sql = """
+                UPDATE order_details od
+                INNER JOIN orders o ON o.id = od.order_id
+                SET od.manager_approval = 'REJECTED',
+                    od.line_status = 'CANCELLED'
+                WHERE od.id = ? AND o.status = 'OPEN'
+                  AND od.manager_approval = 'PENDING'
+                  AND od.line_status NOT IN ('SERVED', 'CANCELLED')
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, detailId);
             return ps.executeUpdate();
         }
     }
@@ -214,8 +352,10 @@ public class OrderDetailDAO {
         row.setOrderId(rs.getLong("order_id"));
         row.setTableCode(rs.getString("table_code"));
         row.setMenuItemName(rs.getString("name"));
+        row.setItemType(MenuItemType.valueOf(rs.getString("item_type")));
         row.setQuantity(rs.getInt("quantity"));
         row.setLineStatus(OrderLineStatus.valueOf(rs.getString("line_status")));
+        row.setManagerApproval(ManagerApproval.valueOf(rs.getString("manager_approval")));
         row.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
         return row;
     }
@@ -226,12 +366,23 @@ public class OrderDetailDAO {
                 INNER JOIN orders o ON o.id = od.order_id
                 SET od.line_status = 'CANCELLED'
                 WHERE od.id = ? AND o.customer_user_id = ? AND od.line_status = 'PENDING'
+                  AND od.manager_approval = 'PENDING'
                 """;
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, detailId);
             ps.setLong(2, customerUserId);
             return ps.executeUpdate();
         }
+    }
+
+    public record DetailApprovalRow(
+            long orderId,
+            long menuItemId,
+            MenuItemType itemType,
+            int quantity,
+            OrderLineStatus lineStatus,
+            ManagerApproval managerApproval
+    ) {
     }
 
     public static class PendingLineInfo {

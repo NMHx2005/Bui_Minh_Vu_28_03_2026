@@ -5,6 +5,7 @@ import com.restaurant.model.Role;
 import com.restaurant.model.ChefKitchenLine;
 import com.restaurant.model.DiningTable;
 import com.restaurant.model.MenuItem;
+import com.restaurant.model.ManagerApproval;
 import com.restaurant.model.MenuItemType;
 import com.restaurant.model.OrderLineStatus;
 import com.restaurant.model.OrderLineView;
@@ -148,23 +149,36 @@ public final class TablePrinter {
             System.out.println("(Chưa có món nào trong order.)");
             return;
         }
-        String line = "--------------------------------------------------------------------------------------";
+        String line = "--------------------------------------------------------------------------------------------------------------";
         System.out.println(line);
         System.out.printf(Locale.forLanguageTag("vi-VN"),
-                "%-8s %-28s %6s %12s %14s %12s%n",
-                "ID dòng", "Món", "SL", "Đơn giá", "Thành tiền", "Trạng thái");
+                "%-8s %-24s %4s %6s %12s %14s %10s %10s%n",
+                "ID dòng", "Món", "Loại", "SL", "Đơn giá", "Thành tiền", "Bếp", "QL duyệt");
         System.out.println(line);
         for (OrderLineView v : lines) {
             System.out.printf(Locale.forLanguageTag("vi-VN"),
-                    "%-8d %-28s %6d %,12.0f %,14.0f %12s%n",
+                    "%-8d %-24s %4s %6d %,12.0f %,14.0f %10s %10s%n",
                     v.getDetailId(),
-                    truncate(v.getMenuItemName(), 28),
+                    truncate(v.getMenuItemName(), 24),
+                    v.getItemType() == MenuItemType.FOOD ? "Ăn" : "Uống",
                     v.getQuantity(),
                     v.getUnitPrice(),
                     v.getLineTotal(),
-                    orderLineStatusVi(v.getLineStatus()));
+                    orderLineStatusVi(v.getLineStatus()),
+                    managerApprovalVi(v.getManagerApproval()));
         }
         System.out.println(line);
+    }
+
+    public static String managerApprovalVi(ManagerApproval a) {
+        if (a == null) {
+            return "-";
+        }
+        return switch (a) {
+            case PENDING -> "Chờ";
+            case APPROVED -> "Đã duyệt";
+            case REJECTED -> "Từ chối";
+        };
     }
 
     /** Tổng thành tiền các dòng không CANCELLED (dùng trước khi xác nhận thanh toán). */
@@ -222,19 +236,22 @@ public final class TablePrinter {
             System.out.println("(Không có món nào đang chờ bếp xử lý.)");
             return;
         }
-        String sep = "--------------------------------------------------------------------------------------------------------";
+        String sep = "------------------------------------------------------------------------------------------------------------------------";
         System.out.println(sep);
-        System.out.printf("%-8s %-8s %-10s %-26s %5s %-12s %14s%n",
-                "ID dòng", "Order", "Bàn", "Món", "SL", "Trạng thái", "Giờ tạo");
+        System.out.printf("%-8s %-8s %-10s %-22s %4s %5s %-10s %-10s %12s%n",
+                "ID dòng", "Order", "Bàn", "Món", "Loại", "SL", "Bếp", "QL", "Giờ tạo");
         System.out.println(sep);
         for (ChefKitchenLine r : lines) {
-            System.out.printf("%-8d %-8d %-10s %-26s %5d %-12s %14s%n",
+            String loai = r.getItemType() == MenuItemType.FOOD ? "Ăn" : "Uống";
+            System.out.printf("%-8d %-8d %-10s %-22s %4s %5d %-10s %-10s %12s%n",
                     r.getDetailId(),
                     r.getOrderId(),
                     truncate(r.getTableCode(), 10),
-                    truncate(r.getMenuItemName(), 26),
+                    truncate(r.getMenuItemName(), 22),
+                    loai,
                     r.getQuantity(),
                     orderLineStatusVi(r.getLineStatus()),
+                    r.getManagerApproval() != null ? managerApprovalVi(r.getManagerApproval()) : "-",
                     r.getCreatedAt().format(CHEF_TIME));
         }
         System.out.println(sep);

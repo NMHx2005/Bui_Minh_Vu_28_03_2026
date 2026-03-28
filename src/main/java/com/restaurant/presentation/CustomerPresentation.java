@@ -31,7 +31,7 @@ public class CustomerPresentation {
             System.out.println("2. Chọn bàn trống — bắt đầu phiên gọi món");
             System.out.println("3. Gọi món (cần đã chọn bàn)");
             System.out.println("4. Theo dõi món đã gọi");
-            System.out.println("5. Hủy món (chỉ khi trạng thái Chờ / PENDING)");
+            System.out.println("5. Hủy món (PENDING bếp + chưa duyệt quản lý)");
             System.out.println("6. Thanh toán — in hóa đơn (phiên OPEN của bạn)");
             System.out.println("0. Đăng xuất");
             int choice = io.readIntInRange("Chọn: ", 0, 6);

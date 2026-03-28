@@ -2,6 +2,8 @@ package com.restaurant.service;
 
 import com.restaurant.dao.OrderDetailDAO;
 import com.restaurant.model.ChefKitchenLine;
+import com.restaurant.model.ManagerApproval;
+import com.restaurant.model.MenuItemType;
 import com.restaurant.model.OrderLineStatus;
 
 import java.sql.SQLException;
@@ -21,13 +23,14 @@ public class ChefService {
     }
 
     /**
-     * Chuyển một bước: PENDING→COOKING→READY→SERVED.
+     * Đồ ăn: nấu khi quản lý chưa duyệt; READY→SERVED chỉ khi đã duyệt.
+     * Đồ uống: chỉ xử lý sau khi quản lý duyệt (đã trừ kho).
      */
     public void advanceLineStatus(long orderDetailId) throws ServiceException {
         try {
-            Optional<ChefKitchenLine> opt = orderDetailDAO.findKitchenLineForChef(orderDetailId);
+            Optional<ChefKitchenLine> opt = orderDetailDAO.findOpenKitchenLine(orderDetailId);
             if (opt.isEmpty()) {
-                throw new ServiceException("Không tìm thấy dòng, order đã đóng, hoặc món chưa được duyệt (manager).");
+                throw new ServiceException("Không tìm thấy dòng, order đã đóng, hoặc món đã xử lý xong.");
             }
             ChefKitchenLine line = opt.get();
             OrderLineStatus cur = line.getLineStatus();
@@ -37,11 +40,33 @@ public class ChefService {
             if (cur == OrderLineStatus.SERVED) {
                 throw new ServiceException("Món đã phục vụ — không cần cập nhật thêm.");
             }
+            MenuItemType type = line.getItemType();
+            ManagerApproval ma = line.getManagerApproval();
+
+            if (type == MenuItemType.DRINK && ma != ManagerApproval.APPROVED) {
+                throw new ServiceException("Đồ uống chưa được quản lý duyệt — không thể xử lý ở bếp.");
+            }
+
+            if (type == MenuItemType.FOOD && cur == OrderLineStatus.READY && ma == ManagerApproval.PENDING) {
+                throw new ServiceException(
+                        "Đồ ăn đã nấu xong (READY) — chờ quản lý duyệt trước khi chuyển sang Đã phục vụ (SERVED).");
+            }
+
             Optional<OrderLineStatus> next = nextStep(cur);
             if (next.isEmpty()) {
                 throw new ServiceException("Trạng thái hiện tại không thể chuyển bước tiếp theo.");
             }
-            int updated = orderDetailDAO.updateLineStatusIf(orderDetailId, cur, next.get());
+
+            int updated;
+            if (type == MenuItemType.FOOD) {
+                if (cur == OrderLineStatus.READY && ma == ManagerApproval.APPROVED) {
+                    updated = orderDetailDAO.advanceFoodReadyToServed(orderDetailId);
+                } else {
+                    updated = orderDetailDAO.advanceFoodCooking(orderDetailId, cur, next.get());
+                }
+            } else {
+                updated = orderDetailDAO.advanceDrinkLine(orderDetailId, cur, next.get());
+            }
             if (updated != 1) {
                 throw new ServiceException("Cập nhật thất bại (trạng thái có thể đã đổi bởi thao tác khác).");
             }

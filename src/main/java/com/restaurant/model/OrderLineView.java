@@ -14,6 +14,7 @@ public class OrderLineView {
     private int quantity;
     private BigDecimal unitPrice;
     private OrderLineStatus lineStatus;
+    private ManagerApproval managerApproval;
 
     public long getDetailId() {
         return detailId;
@@ -69,6 +70,14 @@ public class OrderLineView {
 
     public void setLineStatus(OrderLineStatus lineStatus) {
         this.lineStatus = lineStatus;
+    }
+
+    public ManagerApproval getManagerApproval() {
+        return managerApproval;
+    }
+
+    public void setManagerApproval(ManagerApproval managerApproval) {
+        this.managerApproval = managerApproval;
     }
 
     public BigDecimal getLineTotal() {
