@@ -1,0 +1,217 @@
+package com.restaurant.presentation;
+
+import com.restaurant.model.MenuItem;
+import com.restaurant.model.MenuItemType;
+import com.restaurant.model.User;
+import com.restaurant.service.DiningTableService;
+import com.restaurant.service.MenuItemService;
+import com.restaurant.service.ServiceException;
+import com.restaurant.util.TablePrinter;
+
+import java.util.List;
+
+public class ManagerPresentation {
+
+    private final ConsoleIO io;
+    private final MenuItemService menuItemService = new MenuItemService();
+    private final DiningTableService diningTableService = new DiningTableService();
+
+    public ManagerPresentation(ConsoleIO io) {
+        this.io = io;
+    }
+
+    public void run(User manager) {
+        while (true) {
+            System.out.println();
+            System.out.println("========== Quản lý — Hệ thống Quản lý Nhà hàng ==========");
+            System.out.println("Xin chào, " + manager.getUsername());
+            System.out.println("1. Quản lý thực đơn (món ăn / đồ uống)");
+            System.out.println("2. Quản lý bàn ăn");
+            System.out.println("0. Đăng xuất");
+            int c = io.readIntInRange("Chọn: ", 0, 2);
+            if (c == 0) {
+                return;
+            }
+            if (c == 1) {
+                menuLoop();
+            } else {
+                tableLoop();
+            }
+        }
+    }
+
+    private void menuLoop() {
+        while (true) {
+            System.out.println();
+            System.out.println("----- Quản lý thực đơn -----");
+            System.out.println("1. Hiển thị tất cả món");
+            System.out.println("2. Thêm món");
+            System.out.println("3. Sửa món");
+            System.out.println("4. Xóa món (ẩn khỏi thực đơn)");
+            System.out.println("5. Tìm món theo tên");
+            System.out.println("0. Quay lại");
+            int c = io.readIntInRange("Chọn: ", 0, 5);
+            try {
+                switch (c) {
+                    case 0 -> {
+                        return;
+                    }
+                    case 1 -> listAllItems();
+                    case 2 -> addItem();
+                    case 3 -> updateItem();
+                    case 4 -> deleteItem();
+                    case 5 -> searchItems();
+                    default -> {
+                    }
+                }
+            } catch (ServiceException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    private void listAllItems() throws ServiceException {
+        List<MenuItem> list = menuItemService.listAll();
+        TablePrinter.printMenuItemsTable(list);
+    }
+
+    private void addItem() throws ServiceException {
+        String name = io.readLine("Tên món: ").trim();
+        MenuItemType type = readItemType();
+        var price = io.readPositiveBigDecimal("Giá (VNĐ): ");
+        Integer stock = null;
+        if (type == MenuItemType.DRINK) {
+            stock = io.readNonNegativeInt("Số lượng tồn kho: ");
+        }
+        long id = menuItemService.add(name, type, price, stock);
+        System.out.println("Thêm món thành công. Id món = " + id);
+    }
+
+    private void updateItem() throws ServiceException {
+        long id = io.readLong("Id món cần sửa: ");
+        MenuItem cur = menuItemService.getById(id);
+        System.out.println("Thông tin hiện tại:");
+        TablePrinter.printMenuItemsTable(List.of(cur));
+        String name = io.readLine("Tên món mới: ").trim();
+        MenuItemType type = readItemType();
+        var price = io.readPositiveBigDecimal("Giá mới (VNĐ): ");
+        Integer stock = null;
+        if (type == MenuItemType.DRINK) {
+            stock = io.readNonNegativeInt("Tồn kho mới: ");
+        }
+        menuItemService.update(id, name, type, price, stock);
+        System.out.println("Sửa món thành công.");
+    }
+
+    private void deleteItem() throws ServiceException {
+        long id = io.readLong("Id món cần xóa: ");
+        menuItemService.getById(id);
+        if (!io.readYesNo("Bạn có chắc muốn ẩn món này khỏi thực đơn? (Y/N): ")) {
+            System.out.println("Đã hủy.");
+            return;
+        }
+        menuItemService.softDelete(id);
+        System.out.println("Đã ẩn món (soft delete).");
+    }
+
+    private void searchItems() throws ServiceException {
+        String kw = io.readLine("Nhập tên (tìm tương đối): ").trim();
+        if (kw.isEmpty()) {
+            System.out.println("Từ khóa không được để trống.");
+            return;
+        }
+        List<MenuItem> list = menuItemService.search(kw);
+        if (list.isEmpty()) {
+            System.out.println("Không tìm thấy món nào.");
+        } else {
+            TablePrinter.printMenuItemsTable(list);
+        }
+    }
+
+    private MenuItemType readItemType() {
+        while (true) {
+            System.out.println("Loại: 1 = Đồ ăn, 2 = Đồ uống");
+            int t = io.readIntInRange("Chọn loại: ", 1, 2);
+            if (t == 1) {
+                return MenuItemType.FOOD;
+            }
+            return MenuItemType.DRINK;
+        }
+    }
+
+    private void tableLoop() {
+        while (true) {
+            System.out.println();
+            System.out.println("----- Quản lý bàn ăn -----");
+            System.out.println("1. Hiển thị tất cả bàn");
+            System.out.println("2. Thêm bàn");
+            System.out.println("3. Sửa bàn");
+            System.out.println("4. Xóa bàn");
+            System.out.println("5. Tìm bàn theo mã");
+            System.out.println("0. Quay lại");
+            int c = io.readIntInRange("Chọn: ", 0, 5);
+            try {
+                switch (c) {
+                    case 0 -> {
+                        return;
+                    }
+                    case 1 -> listAllTables();
+                    case 2 -> addTable();
+                    case 3 -> updateTable();
+                    case 4 -> deleteTable();
+                    case 5 -> searchTables();
+                    default -> {
+                    }
+                }
+            } catch (ServiceException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    private void listAllTables() throws ServiceException {
+        TablePrinter.printDiningTablesTable(diningTableService.listAll());
+    }
+
+    private void addTable() throws ServiceException {
+        String code = io.readLine("Mã bàn: ").trim();
+        int cap = io.readIntInRange("Sức chứa (số chỗ, 1–500): ", 1, 500);
+        long id = diningTableService.add(code, cap);
+        System.out.println("Thêm bàn thành công. Id bàn = " + id);
+    }
+
+    private void updateTable() throws ServiceException {
+        long id = io.readLong("Id bàn cần sửa: ");
+        var cur = diningTableService.getById(id);
+        System.out.println("Hiện tại: mã " + cur.getTableCode() + ", sức chứa " + cur.getCapacity());
+        String code = io.readLine("Mã bàn mới: ").trim();
+        int cap = io.readIntInRange("Sức chứa mới (1–500): ", 1, 500);
+        diningTableService.update(id, code, cap);
+        System.out.println("Sửa bàn thành công.");
+    }
+
+    private void deleteTable() throws ServiceException {
+        long id = io.readLong("Id bàn cần xóa: ");
+        diningTableService.getById(id);
+        if (!io.readYesNo("Xóa hẳn bàn này khỏi CSDL? (Y/N): ")) {
+            System.out.println("Đã hủy.");
+            return;
+        }
+        diningTableService.delete(id);
+        System.out.println("Xóa bàn thành công.");
+    }
+
+    private void searchTables() throws ServiceException {
+        String kw = io.readLine("Nhập mã bàn (tìm tương đối): ").trim();
+        if (kw.isEmpty()) {
+            System.out.println("Từ khóa không được để trống.");
+            return;
+        }
+        var list = diningTableService.searchByCode(kw);
+        if (list.isEmpty()) {
+            System.out.println("Không tìm thấy bàn nào.");
+        } else {
+            TablePrinter.printDiningTablesTable(list);
+        }
+    }
+}

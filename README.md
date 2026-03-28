@@ -1,5 +1,18 @@
 # Restaurant Management — Java Core + JDBC
 
+## Buổi 2 (đã triển khai)
+
+- Đăng nhập (sai thì nhập lại; nhập `0` làm tên đăng nhập để quay lại menu chính).
+- Đăng ký khách hàng (validate, username không trùng, lưu bcrypt).
+- Menu **Quản lý**: CRUD + tìm kiếm thực đơn (xóa = ẩn `is_active`), CRUD + tìm bàn theo mã.
+- **Đầu bếp / Khách**: placeholder (buổi 3–4).
+
+Chạy ứng dụng:
+
+```bash
+./mvnw -q compile exec:java
+```
+
 ## Buổi 1
 
 ### Yêu cầu
