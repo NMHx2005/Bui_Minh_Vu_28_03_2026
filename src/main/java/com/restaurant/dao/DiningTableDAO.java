@@ -137,4 +137,45 @@ public class DiningTableDAO {
             return ps.executeUpdate() > 0;
         }
     }
+
+    public List<DiningTable> findByStatus(TableStatus status) throws SQLException {
+        String sql = "SELECT id, table_code, capacity, status, created_at FROM dining_tables WHERE status = ? ORDER BY id";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, status.name());
+            try (ResultSet rs = ps.executeQuery()) {
+                List<DiningTable> list = new ArrayList<>();
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+                return list;
+            }
+        }
+    }
+
+    /**
+     * Chỉ cập nhật nếu trạng thái hiện tại đúng {@code expected} (tránh race đơn giản).
+     */
+    public int updateStatusIf(Connection c, long tableId, TableStatus expected, TableStatus next) throws SQLException {
+        String sql = "UPDATE dining_tables SET status = ? WHERE id = ? AND status = ?";
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, next.name());
+            ps.setLong(2, tableId);
+            ps.setString(3, expected.name());
+            return ps.executeUpdate();
+        }
+    }
+
+    public Optional<DiningTable> findById(Connection c, long id) throws SQLException {
+        String sql = "SELECT id, table_code, capacity, status, created_at FROM dining_tables WHERE id = ?";
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapRow(rs));
+                }
+            }
+        }
+        return Optional.empty();
+    }
 }

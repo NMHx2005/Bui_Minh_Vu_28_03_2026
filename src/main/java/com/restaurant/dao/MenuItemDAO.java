@@ -33,6 +33,25 @@ public class MenuItemDAO {
         return m;
     }
 
+    /** Món đang bán (khách hàng). */
+    public List<MenuItem> findAllActive() throws SQLException {
+        String sql = """
+                SELECT id, name, item_type, price, stock_quantity, is_active, created_at
+                FROM menu_items
+                WHERE is_active = 1
+                ORDER BY item_type, id
+                """;
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            List<MenuItem> list = new ArrayList<>();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+            return list;
+        }
+    }
+
     public List<MenuItem> findAll() throws SQLException {
         String sql = "SELECT id, name, item_type, price, stock_quantity, is_active, created_at FROM menu_items ORDER BY id";
         try (Connection c = DBConnection.getConnection();
@@ -47,9 +66,14 @@ public class MenuItemDAO {
     }
 
     public Optional<MenuItem> findById(long id) throws SQLException {
+        try (Connection c = DBConnection.getConnection()) {
+            return findById(c, id);
+        }
+    }
+
+    public Optional<MenuItem> findById(Connection c, long id) throws SQLException {
         String sql = "SELECT id, name, item_type, price, stock_quantity, is_active, created_at FROM menu_items WHERE id = ?";
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -58,6 +82,35 @@ public class MenuItemDAO {
             }
         }
         return Optional.empty();
+    }
+
+    /** Trừ tồn kho đồ uống; trả false nếu không đủ hàng hoặc không phải DRINK. */
+    public boolean decrementDrinkStock(Connection c, long menuItemId, int quantity) throws SQLException {
+        String sql = """
+                UPDATE menu_items
+                SET stock_quantity = stock_quantity - ?
+                WHERE id = ? AND item_type = 'DRINK' AND is_active = 1
+                  AND stock_quantity IS NOT NULL AND stock_quantity >= ?
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setLong(2, menuItemId);
+            ps.setInt(3, quantity);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public void incrementDrinkStock(Connection c, long menuItemId, int quantity) throws SQLException {
+        String sql = """
+                UPDATE menu_items
+                SET stock_quantity = stock_quantity + ?
+                WHERE id = ? AND item_type = 'DRINK' AND stock_quantity IS NOT NULL
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setLong(2, menuItemId);
+            ps.executeUpdate();
+        }
     }
 
     public List<MenuItem> searchByNameContains(String keyword) throws SQLException {

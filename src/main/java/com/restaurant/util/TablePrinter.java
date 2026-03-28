@@ -3,11 +3,15 @@ package com.restaurant.util;
 import com.restaurant.model.DiningTable;
 import com.restaurant.model.MenuItem;
 import com.restaurant.model.MenuItemType;
+import com.restaurant.model.OrderLineStatus;
+import com.restaurant.model.OrderLineView;
 import com.restaurant.model.TableStatus;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public final class TablePrinter {
 
@@ -73,6 +77,71 @@ public final class TablePrinter {
 
     /** In một dòng giá (dùng khi sửa món). */
     public static String formatMoney(BigDecimal v) {
-        return String.format("%,.0f VNĐ", v);
+        return String.format(Locale.forLanguageTag("vi-VN"), "%,.0f VNĐ", v);
+    }
+
+    /** Thực đơn cho khách: nhóm Đồ ăn / Đồ uống. */
+    public static void printCustomerMenu(List<MenuItem> items) {
+        if (items.isEmpty()) {
+            System.out.println("(Hiện không có món đang phục vụ.)");
+            return;
+        }
+        List<MenuItem> foods = items.stream().filter(m -> m.getItemType() == MenuItemType.FOOD).collect(Collectors.toCollection(ArrayList::new));
+        List<MenuItem> drinks = items.stream().filter(m -> m.getItemType() == MenuItemType.DRINK).collect(Collectors.toCollection(ArrayList::new));
+        if (!foods.isEmpty()) {
+            System.out.println("--- Đồ ăn ---");
+            printCustomerMenuSection(foods);
+        }
+        if (!drinks.isEmpty()) {
+            System.out.println("--- Đồ uống ---");
+            printCustomerMenuSection(drinks);
+        }
+    }
+
+    private static void printCustomerMenuSection(List<MenuItem> section) {
+        String line = "------------------------------------------------------------------------";
+        System.out.println(line);
+        System.out.printf(Locale.forLanguageTag("vi-VN"), "%-6s %-32s %14s %10s%n", "ID", "Tên", "Giá (VNĐ)", "Tồn");
+        System.out.println(line);
+        for (MenuItem m : section) {
+            String stock = m.getStockQuantity() != null ? String.valueOf(m.getStockQuantity()) : "-";
+            System.out.printf(Locale.forLanguageTag("vi-VN"), "%-6d %-32s %,14.0f %10s%n",
+                    m.getId(), truncate(m.getName(), 32), m.getPrice(), stock);
+        }
+        System.out.println(line);
+    }
+
+    public static void printOrderLinesTable(List<OrderLineView> lines) {
+        if (lines.isEmpty()) {
+            System.out.println("(Chưa có món nào trong order.)");
+            return;
+        }
+        String line = "--------------------------------------------------------------------------------------";
+        System.out.println(line);
+        System.out.printf(Locale.forLanguageTag("vi-VN"),
+                "%-8s %-28s %6s %12s %14s %12s%n",
+                "ID dòng", "Món", "SL", "Đơn giá", "Thành tiền", "Trạng thái");
+        System.out.println(line);
+        for (OrderLineView v : lines) {
+            System.out.printf(Locale.forLanguageTag("vi-VN"),
+                    "%-8d %-28s %6d %,12.0f %,14.0f %12s%n",
+                    v.getDetailId(),
+                    truncate(v.getMenuItemName(), 28),
+                    v.getQuantity(),
+                    v.getUnitPrice(),
+                    v.getLineTotal(),
+                    lineStatusVi(v.getLineStatus()));
+        }
+        System.out.println(line);
+    }
+
+    private static String lineStatusVi(OrderLineStatus s) {
+        return switch (s) {
+            case PENDING -> "Chờ";
+            case COOKING -> "Đang nấu";
+            case READY -> "Sẵn sàng";
+            case SERVED -> "Đã phục vụ";
+            case CANCELLED -> "Đã hủy";
+        };
     }
 }
