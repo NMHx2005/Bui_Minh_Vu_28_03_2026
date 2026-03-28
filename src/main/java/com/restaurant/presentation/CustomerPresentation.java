@@ -4,6 +4,7 @@ import com.restaurant.model.DiningTable;
 import com.restaurant.model.User;
 import com.restaurant.service.CheckoutService;
 import com.restaurant.service.CustomerOrderService;
+import com.restaurant.service.ReviewService;
 import com.restaurant.service.ServiceException;
 import com.restaurant.util.TablePrinter;
 
@@ -12,6 +13,7 @@ public class CustomerPresentation {
     private final ConsoleIO io;
     private final CustomerOrderService orderService = new CustomerOrderService();
     private final CheckoutService checkoutService = new CheckoutService();
+    private final ReviewService reviewService = new ReviewService();
 
     public CustomerPresentation(ConsoleIO io) {
         this.io = io;
@@ -33,8 +35,9 @@ public class CustomerPresentation {
             System.out.println("4. Theo dõi món đã gọi");
             System.out.println("5. Hủy món (PENDING bếp + chưa duyệt quản lý)");
             System.out.println("6. Thanh toán — in hóa đơn (phiên OPEN của bạn)");
+            System.out.println("7. Đánh giá dịch vụ (sau khi order đã PAID)");
             System.out.println("0. Đăng xuất");
-            int choice = io.readIntInRange("Chọn: ", 0, 6);
+            int choice = io.readIntInRange("Chọn: ", 0, 7);
             if (choice == 0) {
                 return;
             }
@@ -46,6 +49,9 @@ public class CustomerPresentation {
                     case 4 -> trackOrder(customerId);
                     case 5 -> cancelLine(customerId);
                     case 6 -> checkoutCustomer(customerId);
+                    case 7 -> {
+                        reviewLoop(customerId);
+                    }
                     default -> {
                     }
                 }
@@ -137,5 +143,62 @@ public class CustomerPresentation {
         var inv = checkoutService.checkoutForCustomer(customerId);
         TablePrinter.printCheckoutInvoice(inv);
         System.out.println("Đã thanh toán. Bàn được giải phóng — có thể chọn bàn mới (mục 2).");
+    }
+
+    private void reviewLoop(long customerId) {
+        while (true) {
+            System.out.println();
+            System.out.println("----- Đánh giá (0 = Quay lại menu Khách) -----");
+            System.out.println("1. Xem order đã thanh toán (PAID)");
+            System.out.println("2. Đánh giá tổng thể nhà hàng (theo một order PAID)");
+            System.out.println("3. Đánh giá một món đã dùng (trong order PAID)");
+            System.out.println("0. Quay lại");
+            int c = io.readIntInRange("Chọn: ", 0, 3);
+            if (c == 0) {
+                return;
+            }
+            try {
+                if (c == 1) {
+                    var paid = reviewService.listPaidOrdersForCustomer(customerId);
+                    TablePrinter.printPaidOrdersSummary(paid);
+                    continue;
+                }
+                if (c == 2) {
+                    var paid = reviewService.listPaidOrdersForCustomer(customerId);
+                    if (paid.isEmpty()) {
+                        System.out.println("Chưa có order PAID.");
+                        continue;
+                    }
+                    TablePrinter.printPaidOrdersSummary(paid);
+                    long orderId = io.readLong("Mã order cần đánh giá tổng thể: ");
+                    int rating = io.readIntInRange("Điểm (1–5 sao, bắt buộc): ", 1, 5);
+                    System.out.println("Bình luận (tùy chọn — Enter để bỏ qua):");
+                    String comment = io.readLine("Bình luận: ").trim();
+                    reviewService.submitOrderLevelReview(customerId, orderId, rating, comment.isEmpty() ? null : comment);
+                    System.out.println("Đã gửi đánh giá tổng thể.");
+                    continue;
+                }
+                var paid = reviewService.listPaidOrdersForCustomer(customerId);
+                if (paid.isEmpty()) {
+                    System.out.println("Chưa có order PAID.");
+                    continue;
+                }
+                TablePrinter.printPaidOrdersSummary(paid);
+                long orderId = io.readLong("Mã order chứa món cần đánh giá: ");
+                var dishes = reviewService.listDishOptionsForPaidOrder(customerId, orderId);
+                TablePrinter.printDishReviewOptions(dishes);
+                if (dishes.isEmpty()) {
+                    continue;
+                }
+                long menuItemId = io.readLong("ID món (cột ID món): ");
+                int rating = io.readIntInRange("Điểm (1–5 sao, bắt buộc): ", 1, 5);
+                System.out.println("Bình luận (tùy chọn — Enter để bỏ qua):");
+                String comment = io.readLine("Bình luận: ").trim();
+                reviewService.submitDishReview(customerId, orderId, menuItemId, rating, comment.isEmpty() ? null : comment);
+                System.out.println("Đã gửi đánh giá món.");
+            } catch (ServiceException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
     }
 }

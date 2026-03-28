@@ -1,5 +1,7 @@
 package com.restaurant.util;
 
+import com.restaurant.dao.OrderDAO;
+import com.restaurant.dao.ReviewDAO;
 import com.restaurant.model.CheckoutInvoice;
 import com.restaurant.model.Role;
 import com.restaurant.model.ChefKitchenLine;
@@ -9,6 +11,7 @@ import com.restaurant.model.ManagerApproval;
 import com.restaurant.model.MenuItemType;
 import com.restaurant.model.OrderLineStatus;
 import com.restaurant.model.OrderLineView;
+import com.restaurant.model.ReviewListRow;
 import com.restaurant.model.TableStatus;
 import com.restaurant.model.User;
 
@@ -265,5 +268,67 @@ public final class TablePrinter {
             case SERVED -> "Đã phục vụ";
             case CANCELLED -> "Đã hủy";
         };
+    }
+
+    private static final DateTimeFormatter REVIEW_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    public static void printPaidOrdersSummary(List<OrderDAO.PaidOrderSummary> orders) {
+        if (orders.isEmpty()) {
+            System.out.println("(Chưa có order đã thanh toán để đánh giá.)");
+            return;
+        }
+        String line = "----------------------------------------------------------------------------";
+        System.out.println(line);
+        System.out.printf(Locale.forLanguageTag("vi-VN"),
+                "%-10s %-12s %16s %20s%n", "Order #", "Bàn", "Tổng (VNĐ)", "Thanh toán");
+        System.out.println(line);
+        for (OrderDAO.PaidOrderSummary o : orders) {
+            String when = o.checkedOutAt() != null ? o.checkedOutAt().format(REVIEW_TIME) : "-";
+            System.out.printf(Locale.forLanguageTag("vi-VN"),
+                    "%-10d %-12s %,16.0f %20s%n",
+                    o.orderId(), truncate(o.tableCode(), 12), o.totalAmount(), when);
+        }
+        System.out.println(line);
+    }
+
+    public static void printDishReviewOptions(List<ReviewDAO.DishOption> options) {
+        if (options.isEmpty()) {
+            System.out.println("(Không có món hợp lệ trong order này.)");
+            return;
+        }
+        String line = "----------------------------------------";
+        System.out.println(line);
+        System.out.printf("%-10s %s%n", "ID món", "Tên");
+        System.out.println(line);
+        for (ReviewDAO.DishOption d : options) {
+            System.out.printf("%-10d %s%n", d.menuItemId(), d.menuItemName());
+        }
+        System.out.println(line);
+    }
+
+    public static void printReviewsTable(List<ReviewListRow> rows) {
+        if (rows.isEmpty()) {
+            System.out.println("(Chưa có đánh giá nào.)");
+            return;
+        }
+        String sep = "------------------------------------------------------------------------------------------------------------------------";
+        System.out.println(sep);
+        System.out.printf("%-6s %-14s %-8s %-22s %4s %-30s %16s%n",
+                "ID", "Khách", "Order", "Món", "Sao", "Bình luận", "Thời gian");
+        System.out.println(sep);
+        for (ReviewListRow r : rows) {
+            String dish = r.getMenuItemName() != null ? truncate(r.getMenuItemName(), 22) : "(Cả order)";
+            String oid = r.getOrderId() != null ? String.valueOf(r.getOrderId()) : "-";
+            String cmt = r.getComment() != null ? truncate(r.getComment(), 30) : "-";
+            System.out.printf("%-6d %-14s %-8s %-22s %4d %-30s %16s%n",
+                    r.getId(),
+                    truncate(r.getUsername(), 14),
+                    oid,
+                    dish,
+                    r.getRating(),
+                    cmt,
+                    r.getCreatedAt().format(REVIEW_TIME));
+        }
+        System.out.println(sep);
     }
 }

@@ -77,7 +77,8 @@ CREATE TABLE order_details (
     KEY idx_od_manager_approval (manager_approval)
 ) ENGINE=InnoDB;
 
--- Nâng cao đánh giá (09)
+-- Nâng cao đánh giá (09): một user có thể có review cấp order (menu_item_id NULL) và/hoặc review từng món (cùng order).
+-- Chống trùng: kiểm tra trong service + UNIQUE (user_id, order_id, menu_item_id) khi menu_item_id không NULL.
 CREATE TABLE reviews (
     id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id         BIGINT UNSIGNED NOT NULL,
@@ -89,7 +90,11 @@ CREATE TABLE reviews (
     CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE SET NULL,
     CONSTRAINT fk_reviews_menu FOREIGN KEY (menu_item_id) REFERENCES menu_items (id) ON DELETE SET NULL,
-    UNIQUE KEY uk_reviews_user_order (user_id, order_id),
+    CONSTRAINT chk_reviews_rating CHECK (rating >= 1 AND rating <= 5),
+    UNIQUE KEY uk_reviews_user_order_dish (user_id, order_id, menu_item_id),
+    KEY idx_reviews_user_id (user_id),
+    KEY idx_reviews_order_id (order_id),
+    KEY idx_reviews_menu_item_id (menu_item_id),
     KEY idx_reviews_created (created_at)
 ) ENGINE=InnoDB;
 

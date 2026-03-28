@@ -8,7 +8,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.math.BigDecimal;
 import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +18,10 @@ import java.util.Optional;
 public class OrderDAO {
 
     public record OpenOrderSummary(long orderId, long tableId, String tableCode) {
+    }
+
+    public record PaidOrderSummary(long orderId, String tableCode, BigDecimal totalAmount,
+                                   LocalDateTime checkedOutAt) {
     }
 
     private static RestaurantOrder mapOrder(ResultSet rs) throws SQLException {
@@ -176,6 +182,32 @@ public class OrderDAO {
                         rs.getLong("id"),
                         rs.getLong("table_id"),
                         rs.getString("table_code")));
+            }
+        }
+        return out;
+    }
+
+    public List<PaidOrderSummary> listPaidOrdersForCustomer(long customerUserId) throws SQLException {
+        String sql = """
+                SELECT o.id, dt.table_code, o.total_amount, o.checked_out_at
+                FROM orders o
+                INNER JOIN dining_tables dt ON dt.id = o.table_id
+                WHERE o.customer_user_id = ? AND o.status = 'PAID'
+                ORDER BY o.checked_out_at DESC, o.id DESC
+                """;
+        List<PaidOrderSummary> out = new ArrayList<>();
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, customerUserId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    var co = rs.getTimestamp("checked_out_at");
+                    out.add(new PaidOrderSummary(
+                            rs.getLong("id"),
+                            rs.getString("table_code"),
+                            rs.getBigDecimal("total_amount"),
+                            co != null ? co.toLocalDateTime() : null));
+                }
             }
         }
         return out;
