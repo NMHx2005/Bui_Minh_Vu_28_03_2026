@@ -86,4 +86,71 @@ public class OrderDAO {
             ps.executeUpdate();
         }
     }
+
+    public Optional<RestaurantOrder> findById(long orderId) throws SQLException {
+        try (Connection c = DBConnection.getConnection()) {
+            return findById(c, orderId);
+        }
+    }
+
+    public Optional<RestaurantOrder> findById(Connection c, long orderId) throws SQLException {
+        String sql = """
+                SELECT id, table_id, customer_user_id, status, total_amount, checked_out_at, created_at, updated_at
+                FROM orders WHERE id = ?
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapOrder(rs));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    public Optional<RestaurantOrder> findOpenOrderById(long orderId) throws SQLException {
+        try (Connection c = DBConnection.getConnection()) {
+            return findOpenById(c, orderId);
+        }
+    }
+
+    public Optional<RestaurantOrder> findOpenById(Connection c, long orderId) throws SQLException {
+        String sql = """
+                SELECT id, table_id, customer_user_id, status, total_amount, checked_out_at, created_at, updated_at
+                FROM orders WHERE id = ? AND status = 'OPEN'
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapOrder(rs));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Đánh dấu PAID, ghi checkout, cập nhật total từ chi tiết (không tính CANCELLED). Chỉ khi đang OPEN.
+     *
+     * @return số dòng cập nhật (1 nếu thành công)
+     */
+    public int markOrderPaidIfOpen(Connection c, long orderId) throws SQLException {
+        String sql = """
+                UPDATE orders o
+                SET o.status = 'PAID',
+                    o.checked_out_at = NOW(),
+                    o.total_amount = COALESCE((
+                        SELECT SUM(od.quantity * od.unit_price)
+                        FROM order_details od
+                        WHERE od.order_id = o.id AND od.line_status <> 'CANCELLED'
+                    ), 0)
+                WHERE o.id = ? AND o.status = 'OPEN'
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, orderId);
+            return ps.executeUpdate();
+        }
+    }
 }

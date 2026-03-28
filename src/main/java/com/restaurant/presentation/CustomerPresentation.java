@@ -2,6 +2,7 @@ package com.restaurant.presentation;
 
 import com.restaurant.model.DiningTable;
 import com.restaurant.model.User;
+import com.restaurant.service.CheckoutService;
 import com.restaurant.service.CustomerOrderService;
 import com.restaurant.service.ServiceException;
 import com.restaurant.util.TablePrinter;
@@ -10,6 +11,7 @@ public class CustomerPresentation {
 
     private final ConsoleIO io;
     private final CustomerOrderService orderService = new CustomerOrderService();
+    private final CheckoutService checkoutService = new CheckoutService();
 
     public CustomerPresentation(ConsoleIO io) {
         this.io = io;
@@ -30,8 +32,9 @@ public class CustomerPresentation {
             System.out.println("3. Gọi món (cần đã chọn bàn)");
             System.out.println("4. Theo dõi món đã gọi");
             System.out.println("5. Hủy món (chỉ khi trạng thái Chờ / PENDING)");
+            System.out.println("6. Thanh toán — in hóa đơn (phiên OPEN của bạn)");
             System.out.println("0. Đăng xuất");
-            int choice = io.readIntInRange("Chọn: ", 0, 5);
+            int choice = io.readIntInRange("Chọn: ", 0, 6);
             if (choice == 0) {
                 return;
             }
@@ -42,6 +45,7 @@ public class CustomerPresentation {
                     case 3 -> placeOrder(customerId);
                     case 4 -> trackOrder(customerId);
                     case 5 -> cancelLine(customerId);
+                    case 6 -> checkoutCustomer(customerId);
                     default -> {
                     }
                 }
@@ -113,5 +117,25 @@ public class CustomerPresentation {
         long detailId = io.readLong("Nhập ID dòng (cột ID dòng) muốn hủy: ");
         orderService.cancelOrderLine(customerId, detailId);
         System.out.println("Đã hủy dòng order (trạng thái CANCELLED).");
+    }
+
+    private void checkoutCustomer(long customerId) throws ServiceException {
+        var lines = orderService.listMyOrderLines(customerId);
+        if (lines.isEmpty()) {
+            System.out.println("Bạn chưa có order hoặc order chưa có món — không thể thanh toán.");
+            return;
+        }
+        System.out.println("--- Chi tiết order (trước khi thanh toán) ---");
+        TablePrinter.printOrderLinesTable(lines);
+        System.out.printf("Tạm tính (bỏ qua món đã hủy): %s%n",
+                TablePrinter.formatMoney(TablePrinter.sumBillableSubtotal(lines)));
+        System.out.println("Quy ước: chỉ thanh toán khi mọi món (trừ đã hủy) đã SERVED.");
+        if (!io.readYesNo("Xác nhận thanh toán? (Y/N): ")) {
+            System.out.println("Đã hủy.");
+            return;
+        }
+        var inv = checkoutService.checkoutForCustomer(customerId);
+        TablePrinter.printCheckoutInvoice(inv);
+        System.out.println("Đã thanh toán. Bàn được giải phóng — có thể chọn bàn mới (mục 2).");
     }
 }

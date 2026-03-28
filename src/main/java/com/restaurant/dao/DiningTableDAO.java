@@ -178,4 +178,13 @@ public class DiningTableDAO {
         }
         return Optional.empty();
     }
+
+    /** Giải phóng bàn sau thanh toán (không kiểm tra trạng thái cũ). */
+    public void forceFree(Connection c, long tableId) throws SQLException {
+        String sql = "UPDATE dining_tables SET status = 'FREE' WHERE id = ?";
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, tableId);
+            ps.executeUpdate();
+        }
+    }
 }

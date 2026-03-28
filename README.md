@@ -1,5 +1,13 @@
 # Restaurant Management — Java Core + JDBC
 
+## Nâng cao — Thanh toán & hóa đơn (06)
+
+- **Khách (menu 6):** chỉ thanh toán **order OPEN** của chính tài khoản đang đăng nhập (`findOpenOrderForCustomer`). Không thể thanh toán order của người khác.
+- **Quản lý (menu 3):** nhập **mã order OPEN** bất kỳ → xem chi tiết dòng → xác nhận → thanh toán.
+- **Điều kiện:** trong một transaction: `orders` → **PAID**, `checked_out_at` = NOW, `total_amount` = tổng `quantity * unit_price` (bỏ qua dòng **CANCELLED**), bàn → **FREE** (và xóa `current_order_id` nếu schema có).
+- **Quy ước bếp:** chỉ cho checkout khi **mọi dòng không CANCELLED** đều **SERVED** (đồng bộ với luồng Chef buổi 4).
+- Sau thanh toán: in **hóa đơn** dạng bảng trên console (`TablePrinter.printCheckoutInvoice`).
+
 ## Buổi 5 (đã rà soát)
 
 - Nhập liệu: số / chuỗi rỗng / khoảng trắng xử lý rõ ràng tiếng Việt (`ConsoleIO`, `readNonBlankLine` cho tên/mã/từ khóa).
@@ -8,7 +16,7 @@
 - Menu phụ: ghi chú **0 = Quay lại / Đăng xuất** trên tiêu đề một số màn hình.
 - Checklist kiểm thử: **`TESTING.md`**.
 
-**Hạn chế:** chưa có **thanh toán** (nâng cao) thì order **OPEN** vẫn giữ bàn **OCCUPIED** — đúng với nghiệp vụ hiện tại; xem thêm `TESTING.md`.
+**Ghi chú:** order **OPEN** giữ bàn **OCCUPIED** cho đến khi **thanh toán** (khách mục 6 hoặc quản lý mục 3); sau đó bàn **FREE**. Checklist thủ công có thể tham chiếu mục **06** ở trên (file `TESTING.md` nếu có trong bản sao của bạn).
 
 ## Buổi 4 (đã triển khai)
 

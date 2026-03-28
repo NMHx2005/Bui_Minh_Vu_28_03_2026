@@ -1,5 +1,6 @@
 package com.restaurant.util;
 
+import com.restaurant.model.CheckoutInvoice;
 import com.restaurant.model.ChefKitchenLine;
 import com.restaurant.model.DiningTable;
 import com.restaurant.model.MenuItem;
@@ -135,6 +136,54 @@ public final class TablePrinter {
                     orderLineStatusVi(v.getLineStatus()));
         }
         System.out.println(line);
+    }
+
+    /** Tổng thành tiền các dòng không CANCELLED (dùng trước khi xác nhận thanh toán). */
+    public static BigDecimal sumBillableSubtotal(List<OrderLineView> lines) {
+        BigDecimal s = BigDecimal.ZERO;
+        for (OrderLineView v : lines) {
+            if (v.getLineStatus() == OrderLineStatus.CANCELLED) {
+                continue;
+            }
+            s = s.add(v.getLineTotal());
+        }
+        return s;
+    }
+
+    private static final DateTimeFormatter INVOICE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    /** Hóa đơn sau khi checkout (bảng + printf). */
+    public static void printCheckoutInvoice(CheckoutInvoice inv) {
+        String sep = "==========================================================================================";
+        System.out.println(sep);
+        System.out.println("                         HÓA ĐƠN THANH TOÁN");
+        System.out.println(sep);
+        System.out.printf("Order: #%d    Bàn: %s%n", inv.getOrderId(), inv.getTableCode() != null ? inv.getTableCode() : "-");
+        System.out.printf("Thời điểm thanh toán: %s%n", inv.getCheckedOutAt().format(INVOICE_TIME));
+        System.out.println(sep);
+        System.out.printf(Locale.forLanguageTag("vi-VN"),
+                "%-4s %-32s %6s %14s %16s%n", "STT", "Món", "SL", "Đơn giá", "Thành tiền");
+        System.out.println(sep);
+        List<OrderLineView> bill = inv.getBillableLines();
+        if (bill == null || bill.isEmpty()) {
+            System.out.println("(Không có dòng tính phí.)");
+        } else {
+            int i = 1;
+            for (OrderLineView v : bill) {
+                System.out.printf(Locale.forLanguageTag("vi-VN"),
+                        "%-4d %-32s %6d %,14.0f %,16.0f%n",
+                        i++,
+                        truncate(v.getMenuItemName(), 32),
+                        v.getQuantity(),
+                        v.getUnitPrice(),
+                        v.getLineTotal());
+            }
+        }
+        System.out.println(sep);
+        System.out.printf(Locale.forLanguageTag("vi-VN"),
+                "%58s %,16.0f VNĐ%n", "TỔNG CỘNG:", inv.getTotalAmount());
+        System.out.println(sep);
+        System.out.println("Cảm ơn quý khách.");
     }
 
     private static final DateTimeFormatter CHEF_TIME = DateTimeFormatter.ofPattern("dd/MM HH:mm");

@@ -3,6 +3,7 @@ package com.restaurant.presentation;
 import com.restaurant.model.MenuItem;
 import com.restaurant.model.MenuItemType;
 import com.restaurant.model.User;
+import com.restaurant.service.CheckoutService;
 import com.restaurant.service.DiningTableService;
 import com.restaurant.service.MenuItemService;
 import com.restaurant.service.ServiceException;
@@ -15,6 +16,7 @@ public class ManagerPresentation {
     private final ConsoleIO io;
     private final MenuItemService menuItemService = new MenuItemService();
     private final DiningTableService diningTableService = new DiningTableService();
+    private final CheckoutService checkoutService = new CheckoutService();
 
     public ManagerPresentation(ConsoleIO io) {
         this.io = io;
@@ -27,15 +29,22 @@ public class ManagerPresentation {
             System.out.println("Xin chào, " + manager.getUsername());
             System.out.println("1. Quản lý thực đơn (món ăn / đồ uống)");
             System.out.println("2. Quản lý bàn ăn");
+            System.out.println("3. Thanh toán & hóa đơn (order OPEN — nhập mã order)");
             System.out.println("0. Đăng xuất");
-            int c = io.readIntInRange("Chọn: ", 0, 2);
+            int c = io.readIntInRange("Chọn: ", 0, 3);
             if (c == 0) {
                 return;
             }
             if (c == 1) {
                 menuLoop();
-            } else {
+            } else if (c == 2) {
                 tableLoop();
+            } else {
+                try {
+                    managerCheckout();
+                } catch (ServiceException e) {
+                    System.out.println("Lỗi: " + e.getMessage());
+                }
             }
         }
     }
@@ -205,5 +214,22 @@ public class ManagerPresentation {
         } else {
             TablePrinter.printDiningTablesTable(list);
         }
+    }
+
+    private void managerCheckout() throws ServiceException {
+        long orderId = io.readLong("Mã order OPEN cần thanh toán: ");
+        var preview = checkoutService.loadOpenOrderPreview(orderId);
+        System.out.println("--- Chi tiết order #" + orderId + " ---");
+        TablePrinter.printOrderLinesTable(preview.lines());
+        System.out.printf("Tạm tính (bỏ qua món đã hủy): %s%n",
+                TablePrinter.formatMoney(TablePrinter.sumBillableSubtotal(preview.lines())));
+        System.out.println("Quy ước: chỉ thanh toán khi mọi món (trừ đã hủy) đã SERVED.");
+        if (!io.readYesNo("Xác nhận thanh toán? (Y/N): ")) {
+            System.out.println("Đã hủy.");
+            return;
+        }
+        var inv = checkoutService.checkoutAsManager(orderId);
+        TablePrinter.printCheckoutInvoice(inv);
+        System.out.println("Đã thanh toán và giải phóng bàn.");
     }
 }

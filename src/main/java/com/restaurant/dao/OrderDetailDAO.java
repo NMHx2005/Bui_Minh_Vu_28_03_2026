@@ -36,6 +36,33 @@ public class OrderDetailDAO {
         }
     }
 
+    /** Chi tiết order (không lọc khách) — dùng thanh toán / quản lý. */
+    public List<OrderLineView> listLinesForOrder(long orderId) throws SQLException {
+        try (Connection c = DBConnection.getConnection()) {
+            return listLinesForOrder(c, orderId);
+        }
+    }
+
+    public List<OrderLineView> listLinesForOrder(Connection c, long orderId) throws SQLException {
+        String sql = """
+                SELECT od.id, od.menu_item_id, mi.name, mi.item_type, od.quantity, od.unit_price, od.line_status
+                FROM order_details od
+                INNER JOIN menu_items mi ON mi.id = od.menu_item_id
+                WHERE od.order_id = ?
+                ORDER BY od.created_at ASC, od.id ASC
+                """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<OrderLineView> list = new ArrayList<>();
+                while (rs.next()) {
+                    list.add(mapLineView(rs));
+                }
+                return list;
+            }
+        }
+    }
+
     public List<OrderLineView> listLinesForCustomerOrder(Connection c, long orderId, long customerUserId)
             throws SQLException {
         String sql = """
