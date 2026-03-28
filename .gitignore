@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+*.log
+src/main/resources/db.properties
+prompts/
