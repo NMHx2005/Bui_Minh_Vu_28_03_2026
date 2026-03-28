@@ -23,7 +23,7 @@ public class ManagerPresentation {
     public void run(User manager) {
         while (true) {
             System.out.println();
-            System.out.println("========== Quản lý — Hệ thống Quản lý Nhà hàng ==========");
+            System.out.println("========== Quản lý — Hệ thống Quản lý Nhà hàng (0 = Đăng xuất) ==========");
             System.out.println("Xin chào, " + manager.getUsername());
             System.out.println("1. Quản lý thực đơn (món ăn / đồ uống)");
             System.out.println("2. Quản lý bàn ăn");
@@ -43,7 +43,7 @@ public class ManagerPresentation {
     private void menuLoop() {
         while (true) {
             System.out.println();
-            System.out.println("----- Quản lý thực đơn -----");
+            System.out.println("----- Quản lý thực đơn (0 = Quay lại menu Quản lý) -----");
             System.out.println("1. Hiển thị tất cả món");
             System.out.println("2. Thêm món");
             System.out.println("3. Sửa món");
@@ -76,7 +76,7 @@ public class ManagerPresentation {
     }
 
     private void addItem() throws ServiceException {
-        String name = io.readLine("Tên món: ").trim();
+        String name = io.readNonBlankLine("Tên món: ");
         MenuItemType type = readItemType();
         var price = io.readPositiveBigDecimal("Giá (VNĐ): ");
         Integer stock = null;
@@ -92,7 +92,7 @@ public class ManagerPresentation {
         MenuItem cur = menuItemService.getById(id);
         System.out.println("Thông tin hiện tại:");
         TablePrinter.printMenuItemsTable(List.of(cur));
-        String name = io.readLine("Tên món mới: ").trim();
+        String name = io.readNonBlankLine("Tên món mới: ");
         MenuItemType type = readItemType();
         var price = io.readPositiveBigDecimal("Giá mới (VNĐ): ");
         Integer stock = null;
@@ -115,11 +115,7 @@ public class ManagerPresentation {
     }
 
     private void searchItems() throws ServiceException {
-        String kw = io.readLine("Nhập tên (tìm tương đối): ").trim();
-        if (kw.isEmpty()) {
-            System.out.println("Từ khóa không được để trống.");
-            return;
-        }
+        String kw = io.readNonBlankLine("Nhập tên (tìm tương đối): ");
         List<MenuItem> list = menuItemService.search(kw);
         if (list.isEmpty()) {
             System.out.println("Không tìm thấy món nào.");
@@ -142,7 +138,7 @@ public class ManagerPresentation {
     private void tableLoop() {
         while (true) {
             System.out.println();
-            System.out.println("----- Quản lý bàn ăn -----");
+            System.out.println("----- Quản lý bàn ăn (0 = Quay lại menu Quản lý) -----");
             System.out.println("1. Hiển thị tất cả bàn");
             System.out.println("2. Thêm bàn");
             System.out.println("3. Sửa bàn");
@@ -174,7 +170,7 @@ public class ManagerPresentation {
     }
 
     private void addTable() throws ServiceException {
-        String code = io.readLine("Mã bàn: ").trim();
+        String code = io.readNonBlankLine("Mã bàn: ");
         int cap = io.readIntInRange("Sức chứa (số chỗ, 1–500): ", 1, 500);
         long id = diningTableService.add(code, cap);
         System.out.println("Thêm bàn thành công. Id bàn = " + id);
@@ -184,7 +180,7 @@ public class ManagerPresentation {
         long id = io.readLong("Id bàn cần sửa: ");
         var cur = diningTableService.getById(id);
         System.out.println("Hiện tại: mã " + cur.getTableCode() + ", sức chứa " + cur.getCapacity());
-        String code = io.readLine("Mã bàn mới: ").trim();
+        String code = io.readNonBlankLine("Mã bàn mới: ");
         int cap = io.readIntInRange("Sức chứa mới (1–500): ", 1, 500);
         diningTableService.update(id, code, cap);
         System.out.println("Sửa bàn thành công.");
@@ -202,11 +198,7 @@ public class ManagerPresentation {
     }
 
     private void searchTables() throws ServiceException {
-        String kw = io.readLine("Nhập mã bàn (tìm tương đối): ").trim();
-        if (kw.isEmpty()) {
-            System.out.println("Từ khóa không được để trống.");
-            return;
-        }
+        String kw = io.readNonBlankLine("Nhập mã bàn (tìm tương đối): ");
         var list = diningTableService.searchByCode(kw);
         if (list.isEmpty()) {
             System.out.println("Không tìm thấy bàn nào.");

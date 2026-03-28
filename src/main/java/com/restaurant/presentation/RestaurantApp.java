@@ -16,6 +16,15 @@ public class RestaurantApp {
     }
 
     public void run() {
+        try {
+            runInternal();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("Đã xảy ra lỗi hệ thống. Vui lòng kiểm tra kết nối CSDL và thử lại.");
+        }
+    }
+
+    private void runInternal() {
         System.out.println("╔════════════════════════════════════════╗");
         System.out.println("║   HỆ THỐNG QUẢN LÝ NHÀ HÀNG (Console)  ║");
         System.out.println("╚════════════════════════════════════════╝");
@@ -69,13 +78,9 @@ public class RestaurantApp {
         System.out.println();
         System.out.println("---------- Đăng ký khách hàng ----------");
         try {
-            String username = io.readLine("Tên đăng nhập (3–100 ký tự, chữ/số/_): ").trim();
-            if (username.isEmpty()) {
-                System.out.println("Không được để trống.");
-                return;
-            }
-            String password = io.readLine("Mật khẩu (6–128 ký tự): ");
-            String confirm = io.readLine("Nhập lại mật khẩu: ");
+            String username = io.readNonBlankLine("Tên đăng nhập (3–100 ký tự, chữ/số/_): ");
+            String password = io.readNonBlankLine("Mật khẩu (6–128 ký tự): ");
+            String confirm = io.readNonBlankLine("Nhập lại mật khẩu: ");
             authService.registerCustomer(username, password, confirm);
             System.out.println("Đăng ký thành công. Bạn có thể đăng nhập với tài khoản vừa tạo.");
         } catch (ServiceException e) {

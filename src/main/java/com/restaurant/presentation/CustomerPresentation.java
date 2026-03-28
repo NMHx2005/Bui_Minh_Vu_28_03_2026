@@ -19,7 +19,7 @@ public class CustomerPresentation {
         long customerId = customer.getId();
         while (true) {
             System.out.println();
-            System.out.println("========== Khách hàng — " + customer.getUsername() + " ==========");
+            System.out.println("========== Khách hàng — " + customer.getUsername() + " (0 = Đăng xuất) ==========");
             try {
                 printSessionLine(customerId);
             } catch (ServiceException e) {
@@ -74,7 +74,7 @@ public class CustomerPresentation {
             System.out.println("Hiện không có bàn trống.");
             return;
         }
-        System.out.println("Danh sách bàn đang trống:");
+        System.out.println("Danh sách bàn đang trống (chỉ nhập ID có trong bảng):");
         TablePrinter.printDiningTablesTable(free);
         long tableId = io.readLong("Nhập ID bàn muốn ngồi: ");
         long orderId = orderService.startSessionAtTable(customerId, tableId);

@@ -74,7 +74,7 @@ public class CustomerOrderService {
                     throw new ServiceException("Không tìm thấy bàn.");
                 }
                 if (tableOpt.get().getStatus() != TableStatus.FREE) {
-                    throw new ServiceException("Bàn này không còn trống. Vui lòng chọn bàn khác.");
+                    throw new ServiceException("Bàn này đang OCCUPIED (đang có khách). Chỉ được chọn bàn có trạng thái Trống trong danh sách mục 2.");
                 }
                 int updated = diningTableDAO.updateStatusIf(conn, tableId, TableStatus.FREE, TableStatus.OCCUPIED);
                 if (updated != 1) {

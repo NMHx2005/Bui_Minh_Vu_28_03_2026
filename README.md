@@ -1,5 +1,15 @@
 # Restaurant Management — Java Core + JDBC
 
+## Buổi 5 (đã rà soát)
+
+- Nhập liệu: số / chuỗi rỗng / khoảng trắng xử lý rõ ràng tiếng Việt (`ConsoleIO`, `readNonBlankLine` cho tên/mã/từ khóa).
+- Chọn bàn: thông báo cụ thể khi bàn **OCCUPIED** hoặc không hợp lệ; gợi ý chỉ chọn ID trong danh sách FREE.
+- Lỗi không bắt được ở tầng con: `RestaurantApp` bắt `Exception`, **không in stack trace** ra người dùng.
+- Menu phụ: ghi chú **0 = Quay lại / Đăng xuất** trên tiêu đề một số màn hình.
+- Checklist kiểm thử: **`TESTING.md`**.
+
+**Hạn chế:** chưa có **thanh toán** (nâng cao) thì order **OPEN** vẫn giữ bàn **OCCUPIED** — đúng với nghiệp vụ hiện tại; xem thêm `TESTING.md`.
+
 ## Buổi 4 (đã triển khai)
 
 - Đầu bếp: xem hàng đợi (order **OPEN**, `manager_approval = APPROVED`, trạng thái PENDING / COOKING / READY), sắp xếp theo `created_at`.
