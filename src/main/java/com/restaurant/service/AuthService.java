@@ -50,6 +50,15 @@ public class AuthService {
         }
     }
 
+    /** Dùng khi tạo tài khoản mới (đăng ký khách / tạo đầu bếp). */
+    public void validateUsernameForNewAccount(String username) throws ServiceException {
+        validateUsername(username);
+    }
+
+    public void validatePasswordForNewAccount(String password) throws ServiceException {
+        validatePassword(password);
+    }
+
     private void validateUsername(String username) throws ServiceException {
         if (username == null || username.isBlank()) {
             throw new ServiceException("Tên đăng nhập không được để trống.");

@@ -1,6 +1,7 @@
 package com.restaurant.util;
 
 import com.restaurant.model.CheckoutInvoice;
+import com.restaurant.model.Role;
 import com.restaurant.model.ChefKitchenLine;
 import com.restaurant.model.DiningTable;
 import com.restaurant.model.MenuItem;
@@ -8,6 +9,7 @@ import com.restaurant.model.MenuItemType;
 import com.restaurant.model.OrderLineStatus;
 import com.restaurant.model.OrderLineView;
 import com.restaurant.model.TableStatus;
+import com.restaurant.model.User;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
@@ -46,6 +48,33 @@ public final class TablePrinter {
                     active);
         }
         System.out.println(line);
+    }
+
+    public static void printUsersAdminTable(List<User> users) {
+        if (users.isEmpty()) {
+            System.out.println("(Chưa có người dùng nào.)");
+            return;
+        }
+        String line = "------------------------------------------------------------------------";
+        System.out.println(line);
+        System.out.printf("%-8s %-26s %-12s %12s%n", "ID", "Username", "Vai trò", "Hoạt động");
+        System.out.println(line);
+        for (User u : users) {
+            System.out.printf("%-8d %-26s %-12s %12s%n",
+                    u.getId() != null ? u.getId() : 0L,
+                    truncate(u.getUsername(), 26),
+                    roleVi(u.getRole()),
+                    u.isActive() ? "Có" : "Không");
+        }
+        System.out.println(line);
+    }
+
+    private static String roleVi(Role r) {
+        return switch (r) {
+            case MANAGER -> "Quản lý";
+            case CHEF -> "Đầu bếp";
+            case CUSTOMER -> "Khách";
+        };
     }
 
     public static void printDiningTablesTable(List<DiningTable> tables) {

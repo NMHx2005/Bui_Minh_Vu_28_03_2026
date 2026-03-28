@@ -30,8 +30,9 @@ public class ManagerPresentation {
             System.out.println("1. Quản lý thực đơn (món ăn / đồ uống)");
             System.out.println("2. Quản lý bàn ăn");
             System.out.println("3. Thanh toán & hóa đơn (order OPEN — nhập mã order)");
+            System.out.println("4. Quản lý người dùng (danh sách / tạo đầu bếp / vô hiệu hóa)");
             System.out.println("0. Đăng xuất");
-            int c = io.readIntInRange("Chọn: ", 0, 3);
+            int c = io.readIntInRange("Chọn: ", 0, 4);
             if (c == 0) {
                 return;
             }
@@ -39,12 +40,14 @@ public class ManagerPresentation {
                 menuLoop();
             } else if (c == 2) {
                 tableLoop();
-            } else {
+            } else if (c == 3) {
                 try {
                     managerCheckout();
                 } catch (ServiceException e) {
                     System.out.println("Lỗi: " + e.getMessage());
                 }
+            } else {
+                new UserAdminPresentation(io).run(manager);
             }
         }
     }

@@ -8,6 +8,14 @@
 - **Quy ước bếp:** chỉ cho checkout khi **mọi dòng không CANCELLED** đều **SERVED** (đồng bộ với luồng Chef buổi 4).
 - Sau thanh toán: in **hóa đơn** dạng bảng trên console (`TablePrinter.printCheckoutInvoice`).
 
+## Nâng cao — Quản lý người dùng (07)
+
+- **`users.is_active`:** đã có trong `sql/schema.sql`; DB cũ có thể chạy `sql/migration_07_users_is_active.sql` (bỏ qua nếu cột đã tồn tại).
+- **Đăng nhập:** `is_active = 0` → từ chối, thông báo *Tài khoản đã bị vô hiệu hóa* (sau khi xác thực mật khẩu đúng).
+- **Quản lý — menu 4:** liệt kê user (id, username, role, hoạt động); tạo **CHEF** (username/mật khẩu, bcrypt, kiểm tra trùng tên); **vô hiệu hóa** theo id + xác nhận.
+- **An toàn:** không tự vô hiệu chính mình; không vô hiệu **manager cuối cùng** đang active (`UserAdminService` + `UserDAO.countActiveByRole`).
+- **Tầng code:** `UserAdminService`, `UserAdminPresentation`, mở rộng `UserDAO` / `AuthService` (validate tái dùng cho tạo đầu bếp). Đăng ký khách không đổi.
+
 ## Buổi 5 (đã rà soát)
 
 - Nhập liệu: số / chuỗi rỗng / khoảng trắng xử lý rõ ràng tiếng Việt (`ConsoleIO`, `readNonBlankLine` cho tên/mã/từ khóa).
@@ -16,7 +24,7 @@
 - Menu phụ: ghi chú **0 = Quay lại / Đăng xuất** trên tiêu đề một số màn hình.
 - Checklist kiểm thử: **`TESTING.md`**.
 
-**Ghi chú:** order **OPEN** giữ bàn **OCCUPIED** cho đến khi **thanh toán** (khách mục 6 hoặc quản lý mục 3); sau đó bàn **FREE**. Checklist thủ công có thể tham chiếu mục **06** ở trên (file `TESTING.md` nếu có trong bản sao của bạn).
+**Ghi chú:** order **OPEN** giữ bàn **OCCUPIED** cho đến khi **thanh toán** (khách mục 6 hoặc quản lý mục 3); sau đó bàn **FREE**. Quản lý người dùng: **mục 4** (xem mục **07** ở trên).
 
 ## Buổi 4 (đã triển khai)
 
