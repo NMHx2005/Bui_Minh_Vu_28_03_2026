@@ -27,14 +27,16 @@ public class ManagerPresentation {
             System.out.println();
             System.out.println("========== Quản lý — Hệ thống Quản lý Nhà hàng (0 = Đăng xuất) ==========");
             System.out.println("Xin chào, " + manager.getUsername());
+            System.out.println("Chọn số chức năng; 0 = đăng xuất.");
             System.out.println("1. Quản lý thực đơn (món ăn / đồ uống)");
             System.out.println("2. Quản lý bàn ăn");
             System.out.println("3. Thanh toán & hóa đơn (order OPEN — nhập mã order)");
             System.out.println("4. Quản lý người dùng (danh sách / tạo đầu bếp / vô hiệu hóa)");
             System.out.println("5. Duyệt món theo order (đồ ăn sau READY / đồ uống + kho)");
             System.out.println("6. Xem đánh giá từ khách");
+            System.out.println("7. Thống kê & báo cáo (doanh thu PAID, top món)");
             System.out.println("0. Đăng xuất");
-            int c = io.readIntInRange("Chọn: ", 0, 6);
+            int c = io.readIntInRange("Chọn: ", 0, 7);
             if (c == 0) {
                 return;
             }
@@ -52,8 +54,10 @@ public class ManagerPresentation {
                 new UserAdminPresentation(io).run(manager);
             } else if (c == 5) {
                 new ManagerDishApprovalPresentation(io).run();
-            } else {
+            } else if (c == 6) {
                 new ManagerReviewPresentation(io).run();
+            } else {
+                new ManagerStatisticsPresentation(io).run();
             }
         }
     }

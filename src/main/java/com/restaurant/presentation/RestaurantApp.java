@@ -30,6 +30,7 @@ public class RestaurantApp {
         System.out.println("╚════════════════════════════════════════╝");
         while (true) {
             System.out.println();
+            System.out.println("---------- Menu chính (0 = thoát) ----------");
             System.out.println("1. Đăng nhập");
             System.out.println("2. Đăng ký tài khoản khách hàng");
             System.out.println("0. Thoát chương trình");
@@ -46,7 +47,7 @@ public class RestaurantApp {
             if (user == null) {
                 continue;
             }
-            openDashboard(user);
+            RoleRouter.openDashboard(io, user);
         }
     }
 
@@ -88,12 +89,4 @@ public class RestaurantApp {
         }
     }
 
-    private void openDashboard(User user) {
-        switch (user.getRole()) {
-            case MANAGER -> new ManagerPresentation(io).run(user);
-            case CHEF -> new ChefPresentation(io).run(user);
-            case CUSTOMER -> new CustomerPresentation(io).run(user);
-            default -> System.out.println("Vai trò không hỗ trợ.");
-        }
-    }
 }

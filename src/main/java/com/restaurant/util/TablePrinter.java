@@ -11,6 +11,8 @@ import com.restaurant.model.ManagerApproval;
 import com.restaurant.model.MenuItemType;
 import com.restaurant.model.OrderLineStatus;
 import com.restaurant.model.OrderLineView;
+import com.restaurant.model.report.RevenueByDayRow;
+import com.restaurant.model.report.TopDishRow;
 import com.restaurant.model.ReviewListRow;
 import com.restaurant.model.TableStatus;
 import com.restaurant.model.User;
@@ -330,5 +332,49 @@ public final class TablePrinter {
                     r.getCreatedAt().format(REVIEW_TIME));
         }
         System.out.println(sep);
+    }
+
+    private static final DateTimeFormatter REPORT_DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    public static void printRevenueByDayTable(List<RevenueByDayRow> rows) {
+        if (rows.isEmpty()) {
+            System.out.println("(Không có order PAID trong khoảng ngày này — không có dòng theo ngày.)");
+            return;
+        }
+        String line = "------------------------------------------------------";
+        System.out.println(line);
+        System.out.printf(Locale.forLanguageTag("vi-VN"),
+                "%-14s %18s %12s%n", "Ngày", "Doanh thu (VNĐ)", "Số order");
+        System.out.println(line);
+        for (RevenueByDayRow r : rows) {
+            System.out.printf(Locale.forLanguageTag("vi-VN"),
+                    "%-14s %,18.0f %12d%n",
+                    r.day().format(REPORT_DAY),
+                    r.totalAmount(),
+                    r.orderCount());
+        }
+        System.out.println(line);
+    }
+
+    public static void printTopDishesTable(List<TopDishRow> rows, String caption) {
+        System.out.println("--- " + caption + " ---");
+        if (rows.isEmpty()) {
+            System.out.println("(Không có dữ liệu.)");
+            return;
+        }
+        String line = "------------------------------------------------------------------------";
+        System.out.println(line);
+        System.out.printf(Locale.forLanguageTag("vi-VN"),
+                "%-6s %-28s %12s %16s%n", "ID", "Món", "Tổng SL", "Doanh thu (VNĐ)");
+        System.out.println(line);
+        for (TopDishRow r : rows) {
+            System.out.printf(Locale.forLanguageTag("vi-VN"),
+                    "%-6d %-28s %,12d %,16.0f%n",
+                    r.menuItemId(),
+                    truncate(r.menuItemName(), 28),
+                    r.totalQuantity(),
+                    r.totalRevenue());
+        }
+        System.out.println(line);
     }
 }

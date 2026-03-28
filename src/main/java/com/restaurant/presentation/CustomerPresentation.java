@@ -24,6 +24,7 @@ public class CustomerPresentation {
         while (true) {
             System.out.println();
             System.out.println("========== Khách hàng — " + customer.getUsername() + " (0 = Đăng xuất) ==========");
+            System.out.println("Chọn bàn, gọi món, thanh toán hoặc đánh giá; 0 = đăng xuất.");
             try {
                 printSessionLine(customerId);
             } catch (ServiceException e) {

@@ -18,6 +18,7 @@ public class ChefPresentation {
         while (true) {
             System.out.println();
             System.out.println("========== Đầu bếp — " + chef.getUsername() + " (0 = Đăng xuất) ==========");
+            System.out.println("Xử lý món theo hàng đợi bếp; 0 = đăng xuất.");
             System.out.println("1. Xem hàng đợi (PENDING / Đang nấu / Sẵn sàng)");
             System.out.println("2. Cập nhật trạng thái món (một bước: Chờ→Nấu→Sẵn sàng→Phục vụ)");
             System.out.println("0. Đăng xuất");

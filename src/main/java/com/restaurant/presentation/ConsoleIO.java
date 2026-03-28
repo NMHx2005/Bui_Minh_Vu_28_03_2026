@@ -1,6 +1,9 @@
 package com.restaurant.presentation;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Scanner;
 
 /**
@@ -102,6 +105,19 @@ public class ConsoleIO {
                 System.out.println("Số phải >= 0.");
             } catch (NumberFormatException e) {
                 System.out.println("Vui lòng nhập số nguyên (0, 1, 2, …).");
+            }
+        }
+    }
+
+    /** Ngày ISO: yyyy-MM-dd (dùng báo cáo / thống kê). */
+    public LocalDate readLocalDateIso(String prompt) {
+        DateTimeFormatter f = DateTimeFormatter.ISO_LOCAL_DATE;
+        while (true) {
+            String s = readNonBlankLine(prompt + " (yyyy-MM-dd): ").trim();
+            try {
+                return LocalDate.parse(s, f);
+            } catch (DateTimeParseException e) {
+                System.out.println("Không đúng định dạng. Ví dụ: 2026-03-01");
             }
         }
     }

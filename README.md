@@ -18,6 +18,8 @@ bash sql/init-db.sh
 
 Lệnh này **xóa** database `restaurant_db` cũ (nếu có), rồi import toàn bộ `sql/schema.sql` (bảng + dữ liệu mẫu). Nhập **mật khẩu MySQL root** khi được hỏi.
 
+**Thống kê (quản lý → mục 7):** seed có **3 order PAID** (#1–#3) với `checked_out_at` trong **03/2026** (ví dụ 2026-03-01 … 2026-03-26). Chọn khoảng ngày hoặc tháng **3/2026** để thấy doanh thu / top món.
+
 Nếu **không** muốn xóa DB cũ, chỉ tạo khi chưa có:
 
 ```bash
@@ -43,7 +45,11 @@ Nếu đã cài Maven toàn máy:
 mvn -q compile exec:java
 ```
 
-### 5. Tài khoản mẫu (sau khi import `schema.sql`)
+### 5. Hướng dẫn test & sử dụng chức năng
+
+Xem file **[HUONG_DAN_TEST_VA_SU_DUNG.md](HUONG_DAN_TEST_VA_SU_DUNG.md)** (menu theo vai trò, luồng mẫu, checklist).
+
+### 6. Tài khoản mẫu (sau khi import `schema.sql`)
 
 Mật khẩu đăng nhập ứng dụng: **`Manager@123`** (trừ tài khoản bị khóa).
 
