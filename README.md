@@ -45,6 +45,21 @@ Nếu đã cài Maven toàn máy:
 mvn -q compile exec:java
 ```
 
+### 4.1. Nếu terminal VS Code bị lỗi font tiếng Việt
+
+Repo đã có sẵn cấu hình UTF-8:
+
+- `pom.xml`: ép JVM dùng UTF-8 khi chạy `exec:java`.
+- `.vscode/settings.json`: đặt `JAVA_TOOL_OPTIONS` UTF-8 cho terminal Windows.
+
+Nếu vẫn lỗi trên Windows, chạy thêm trong terminal trước khi chạy app:
+
+```powershell
+chcp 65001
+$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new()
+```
+
 ### 5. Hướng dẫn test & sử dụng chức năng
 
 Xem file **[HUONG_DAN_TEST_VA_SU_DUNG.md](HUONG_DAN_TEST_VA_SU_DUNG.md)** (menu theo vai trò, luồng mẫu, checklist).
